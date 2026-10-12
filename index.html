@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>源泉所得税 計算</title>
+<meta name="description" content="給与・賞与の源泉所得税を国税庁の源泉徴収税額表から計算します。社会保険料の計算は切り替え式。">
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#f4f5f7;--card:#ffffff;--text:#1c1f24;--muted:#667085;--line:#e1e4ea;--accent:#0f766e;--accent-text:#ffffff;--accent-soft:#e6f4f2;--seg-bg:#eceff3;--warn-bg:#fff6e0;--warn:#8a5300;--err-bg:#fdeaea;--err:#a12a2a;--input-bg:#ffffff;--shadow:0 1px 2px rgba(16,24,40,.06)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1114;--card:#191c21;--text:#e7e9ec;--muted:#98a2b3;--line:#2b3038;--accent:#3fc1b4;--accent-text:#0b2a27;--accent-soft:#143431;--seg-bg:#23272e;--warn-bg:#3a2d0f;--warn:#f5c86a;--err-bg:#3b1a1a;--err:#f4a3a3;--input-bg:#111317;--shadow:none}}
+:root[data-theme="dark"]{--bg:#0f1114;--card:#191c21;--text:#e7e9ec;--muted:#98a2b3;--line:#2b3038;--accent:#3fc1b4;--accent-text:#0b2a27;--accent-soft:#143431;--seg-bg:#23272e;--warn-bg:#3a2d0f;--warn:#f5c86a;--err-bg:#3b1a1a;--err:#f4a3a3;--input-bg:#111317;--shadow:none}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
+main{max-width:720px;margin:0 auto;padding:16px 16px 48px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px}
+h1{font-size:1.25rem;margin:0;font-weight:700;letter-spacing:.01em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+label.f{display:block;font-size:.86rem;color:var(--muted);margin-bottom:4px}
+.row{margin-bottom:14px}
+.row:last-child{margin-bottom:0}
+input[type=text],select{width:100%;font:inherit;font-size:1.05rem;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--input-bg);color:var(--text);min-height:46px}
+input[type=text]{font-variant-numeric:tabular-nums;text-align:right}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.yen{position:relative}
+.yen input{padding-right:34px}
+.yen::after{content:"円";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.9rem}
+.seg{display:flex;background:var(--seg-bg);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;padding:9px 6px;border-radius:8px;cursor:pointer;min-height:42px}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:480px){.grid2{grid-template-columns:1fr}}
+.hint{font-size:.8rem;color:var(--muted);margin-top:5px}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;user-select:none}
+.switch strong{font-weight:600}
+.switch input{appearance:none;width:48px;height:28px;border-radius:14px;background:var(--seg-bg);position:relative;margin:0;flex:none;cursor:pointer;border:1px solid var(--line)}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+.switch input:checked{background:var(--accent);border-color:var(--accent)}
+.switch input:checked::after{left:23px}
+.result{text-align:center;padding:22px 16px}
+.result .lbl{color:var(--muted);font-size:.9rem}
+.result .big{font-size:2.6rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin:4px 0 2px}
+.result .big small{font-size:1.1rem;font-weight:500;margin-left:4px}
+.result .sub{color:var(--muted);font-size:.9rem}
+.basis{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);text-align:left;font-size:.88rem;color:var(--muted)}
+.basis b{color:var(--text);font-weight:600}
+.basis ul{margin:6px 0 0;padding-left:1.2em}
+table.si{width:100%;border-collapse:collapse;margin-top:12px;font-size:.92rem}
+table.si td{padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+table.si td:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.si tr.total td{font-weight:700;border-bottom:2px solid var(--line)}
+table.si tr.hl td{color:var(--accent);font-weight:700}
+.note{font-size:.82rem;color:var(--muted);margin-top:6px}
+.alert{border-radius:10px;padding:10px 12px;font-size:.88rem;margin-top:12px;text-align:left}
+.alert.warn{background:var(--warn-bg);color:var(--warn)}
+.alert.err{background:var(--err-bg);color:var(--err)}
+.btn{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:8px 14px;cursor:pointer;min-height:40px}
+.btn.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.actions{display:flex;gap:8px;justify-content:center;margin-top:12px}
+details{margin-top:10px}
+summary{cursor:pointer;font-size:.88rem;color:var(--muted)}
+footer{font-size:.78rem;color:var(--muted);line-height:1.6}
+footer a{color:inherit}
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>源泉所得税 計算</h1>
+  <select id="year" aria-label="年分" style="width:auto;min-height:40px;padding:6px 10px;font-size:.95rem"></select>
+</header>
+
+<div class="card">
+  <div class="seg" role="group" aria-label="支給区分">
+    <button type="button" data-mode="monthly" aria-pressed="true">月給</button>
+    <button type="button" data-mode="bonus" aria-pressed="false">賞与</button>
+  </div>
+</div>
+
+<div class="card">
+  <label class="switch"><span><strong>社会保険料も計算する</strong><div class="hint">OFF: 社会保険料を引いた後の金額を直接入力 ／ ON: 総支給額から健康保険・厚生年金・雇用保険の本人負担分を計算</div></span><input type="checkbox" id="si"></label>
+</div>
+
+<div class="card" id="inputs">
+  <!-- 金額 -->
+  <div class="row" id="rowAmount">
+    <label class="f" for="amount" id="amountLabel">社会保険料等控除後の給与額</label>
+    <div class="yen"><input type="text" id="amount" inputmode="numeric" placeholder="例: 253,000" autocomplete="off"></div>
+    <div class="hint" id="amountHint"></div>
+  </div>
+  <div class="row si-only hidden" id="rowCommute">
+    <label class="f" for="commute">非課税の通勤手当（任意）</label>
+    <div class="yen"><input type="text" id="commute" inputmode="numeric" placeholder="0" autocomplete="off"></div>
+    <div class="hint">所得税の対象外ですが、社会保険の報酬月額と雇用保険の賃金には含めます。</div>
+  </div>
+  <div class="row bonus-only hidden" id="rowPrev">
+    <label class="f" for="prev">前月の社会保険料等控除後の給与額</label>
+    <div class="yen"><input type="text" id="prev" inputmode="numeric" placeholder="例: 253,000" autocomplete="off"></div>
+    <div class="hint">前月の給与（賞与を除く）から社会保険料の本人負担分を引いた金額。賞与の税率はこの金額で決まります。</div>
+  </div>
+  <div class="row bonus-only hidden" id="rowPeriod">
+    <label class="f" for="period">賞与の計算期間</label>
+    <select id="period"><option value="6">6か月以下（年2回など）</option><option value="12">6か月超（年1回など）</option></select>
+    <div class="hint">前月給与がない場合や、賞与が前月給与の10倍を超える場合の特例計算にだけ使います。</div>
+  </div>
+
+  <!-- 社会保険 -->
+  <div class="si-only hidden">
+    <div class="grid2 row">
+      <div><label class="f" for="pref">協会けんぽ 都道府県</label><select id="pref"></select></div>
+      <div><label class="f" for="age">年齢区分</label><select id="age"></select></div>
+    </div>
+    <div class="grid2 row">
+      <div><label class="f" for="std">標準報酬月額</label><select id="std"></select><div class="hint">決定通知書の等級と違うときはここで選ぶ。</div></div>
+      <div><label class="f" for="emp">雇用保険</label><select id="emp"></select></div>
+    </div>
+  </div>
+
+  <!-- 甲乙・扶養 -->
+  <div class="row">
+    <label class="f">税額表の欄</label>
+    <div class="seg" role="group" aria-label="甲欄・乙欄">
+      <button type="button" data-col="kou" aria-pressed="true">甲欄（扶養控除等申告書あり）</button>
+      <button type="button" data-col="otsu" aria-pressed="false">乙欄（申告書なし）</button>
+    </div>
+    <div class="hint" id="colHint">本業として勤めていて「給与所得者の扶養控除等（異動）申告書」を提出している人は甲欄。</div>
+  </div>
+  <div class="row" id="rowDeps">
+    <label class="f" for="deps">扶養親族等の数</label>
+    <select id="deps"></select>
+    <div class="hint">申告書に書かれた源泉控除対象配偶者＋源泉控除対象親族（特定親族を含む）の人数。本人が障害者・寡婦・ひとり親・勤労学生ならそれぞれ1人加算、扶養親族に障害者がいれば1人加算。</div>
+  </div>
+  <div class="row hidden" id="rowOtsuDeps">
+    <details><summary>「従たる給与についての扶養控除等申告書」の提出がある場合</summary>
+      <label class="f" for="otsuDeps" style="margin-top:8px">その申告書に記載された扶養親族等の数</label>
+      <select id="otsuDeps"></select>
+    </details>
+  </div>
+</div>
+
+<div class="card result" id="result">
+  <div class="lbl" id="resLabel">源泉所得税額</div>
+  <div class="big" id="resTax">—</div>
+  <div class="sub" id="resSub">金額を入力すると自動で計算します</div>
+  <div id="resSI"></div>
+  <div class="basis hidden" id="resBasis"></div>
+  <div id="resAlerts"></div>
+  <div class="actions"><button type="button" class="btn primary" id="copy">税額をコピー</button><button type="button" class="btn" id="reset">入力をクリア</button></div>
+</div>
+
+<footer id="foot"></footer>
+</main>
+
+<script src="tables/2026.js"></script>
+<script src="tables/2027.js"></script>
+<script src="tables/si-2026.js"></script>
+<script src="calc.js"></script>
+<script>
+(function(){
+'use strict';
+const TABLES = window.GENSEN_TABLES || {};
+const SIDATA = window.GENSEN_SI || {};
+const YEARS = Object.keys(TABLES).sort();
+const { AGE_BANDS, pct, parseYen, monthlyTax, bonusTax, computeSI, computeSIBonus } = window.GENSEN_CALC;
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString('ja-JP');
+const STORE = 'gensen-calc:v1';
+const ym = s => { const [y, m] = s.split('-'); return `${y}年${+m}月`; };
+
+// ---------- 状態 ----------
+const defaults = { year: null, mode: 'monthly', si: false, col: 'kou', deps: 0, otsuDeps: 0, amount: '', commute: '', prev: '', period: '6', pref: 12, age: 0, std: 0, emp: 0 };
+let st = Object.assign({}, defaults);
+try { Object.assign(st, JSON.parse(localStorage.getItem(STORE) || '{}')); } catch (e) {}
+function save(){ try { localStorage.setItem(STORE, JSON.stringify(st)); } catch (e) {} }
+function pickYear(){
+  if (st.year && TABLES[st.year]) return st.year;
+  const y = String(new Date().getFullYear());
+  if (TABLES[y]) return y;
+  return YEARS.filter(k => k <= y).pop() || YEARS[0];
+}
+function siFor(year){ return SIDATA[year] || SIDATA[Object.keys(SIDATA).sort().filter(k => k <= year).pop()] || SIDATA[Object.keys(SIDATA).sort()[0]]; }
+
+// ---------- 初期化 ----------
+function fill(sel, items){ sel.innerHTML = ''; items.forEach(([v, label]) => { const o = document.createElement('option'); o.value = v; o.textContent = label; sel.appendChild(o); }); }
+fill($('year'), YEARS.map(y => [y, `${TABLES[y].era}（${y}年）`]));
+fill($('deps'), Array.from({length: 11}, (_, i) => [i, i === 10 ? '10人以上' : `${i}人`]));
+fill($('age'), AGE_BANDS.map((b, i) => [i, b[0]]));
+fill($('otsuDeps'), Array.from({length: 8}, (_, i) => [i, `${i}人`]));
+function fillSI(S){
+  fill($('pref'), S.kenpo.prefectures.map((p, i) => [i, `${p[0]}（${p[1].toFixed(2)}%）`]));
+  fill($('std'), [[0, '報酬月額から自動判定']].concat(S.kenpo.grades.map(g => [g[1], `${g[0]}等級${g[4] != null ? `（厚年${g[4]}）` : ''} ${fmt(g[1])}円`])));
+  fill($('emp'), S.employment.options.map((o, i) => [i, `${o[0]}（${o[1]}%）`]).concat([[-1, '対象外']]));
+}
+st.year = pickYear();
+fillSI(siFor(st.year));
+$('year').value = st.year; $('si').checked = !!st.si; $('deps').value = st.deps; $('otsuDeps').value = st.otsuDeps;
+$('amount').value = st.amount; $('commute').value = st.commute; $('prev').value = st.prev; $('period').value = st.period;
+$('pref').value = st.pref; $('age').value = st.age; $('std').value = st.std; $('emp').value = st.emp;
+
+function setSeg(attr, value){ document.querySelectorAll(`[data-${attr}]`).forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === value))); }
+function syncVisibility(){
+  const bonus = st.mode === 'bonus';
+  document.querySelectorAll('.bonus-only').forEach(e => e.classList.toggle('hidden', !bonus));
+  document.querySelectorAll('.si-only').forEach(e => e.classList.toggle('hidden', !st.si));
+  $('rowDeps').classList.toggle('hidden', st.col !== 'kou');
+  $('rowOtsuDeps').classList.toggle('hidden', st.col !== 'otsu');
+  $('amountLabel').textContent = st.si ? (bonus ? '賞与の総支給額' : '課税支給額（非課税の通勤手当を除く総支給額）') : (bonus ? '賞与の社会保険料等控除後の金額' : '社会保険料等控除後の給与額');
+  $('amountHint').textContent = st.si ? '基本給・各種手当・残業代などの合計。通勤手当は下の欄へ。' : (bonus ? '賞与の額から健康保険・厚生年金・雇用保険の本人負担分を引いた金額。' : '総支給額（非課税の通勤手当を除く）から健康保険・厚生年金・雇用保険の本人負担分を引いた金額。');
+  $('colHint').textContent = st.col === 'kou' ? '本業として勤めていて「給与所得者の扶養控除等（異動）申告書」を提出している人は甲欄。' : '申告書の提出がない人（他に本業がある副業・掛け持ちなど）は乙欄。';
+  $('resLabel').textContent = bonus ? '賞与の源泉所得税額' : '源泉所得税額';
+  setSeg('mode', st.mode); setSeg('col', st.col);
+}
+
+// ---------- 計算と描画 ----------
+function render(){
+  const T = TABLES[st.year]; const S = siFor(st.year);
+  const bonus = st.mode === 'bonus';
+  const amount = parseYen(st.amount), commute = parseYen(st.commute) || 0, prev = parseYen(st.prev);
+  const deps = +st.deps, otsuDeps = +st.otsuDeps, months = +st.period;
+  const alerts = []; let basisHtml = ''; let siHtml = '';
+  const show = (tax, sub) => { $('resTax').innerHTML = tax == null ? '—' : `${fmt(tax)}<small>円</small>`; $('resSub').textContent = sub || ''; };
+  const finish = () => { $('resSI').innerHTML = siHtml; $('resBasis').innerHTML = basisHtml; $('resBasis').classList.toggle('hidden', !basisHtml); $('resAlerts').innerHTML = alerts.map(a => `<div class="alert ${a[0]}">${a[1]}</div>`).join(''); };
+
+  if (amount == null || Number.isNaN(amount) || amount < 0){
+    show(null, Number.isNaN(amount) || (amount != null && amount < 0) ? '金額は半角数字で入力してください' : '金額を入力すると自動で計算します'); finish(); return;
+  }
+  if (bonus && !st.si && prev != null && Number.isNaN(prev)){ show(null, '前月の給与額は半角数字で入力してください'); finish(); return; }
+
+  let net = amount; let si = null;
+  if (st.si){
+    const o = { taxable: amount, commute, pref: +st.pref, age: +st.age, std: +st.std, emp: +st.emp };
+    si = bonus ? computeSIBonus(S, o) : computeSI(S, o);
+    net = Math.max(0, amount - si.total);
+    const careTxt = si.flags.care ? ` ＋ 介護 ${S.kenpo.careRate}%` : '';
+    const kenpoLabel = si.flags.kenpo ? `健康保険料<div class="note">${S.kenpo.prefectures[o.pref][0]} ${si.prefRate.toFixed(2)}% ＋ 子ども・子育て支援金 ${S.kenpo.supportRate}%${careTxt} ＝ ${si.kenpoRate}% の折半</div>` : '健康保険料<div class="note">対象外</div>';
+    const pensionLabel = si.flags.pension ? `厚生年金保険料<div class="note">${S.pension.rate}% の折半${bonus ? '（標準賞与額は月150万円が上限）' : ''}</div>` : '厚生年金保険料<div class="note">対象外</div>';
+    const empLabel = si.empRate != null ? `雇用保険料<div class="note">${bonus ? '賞与額' : '賃金総額（通勤手当込み）'} ${fmt(bonus ? amount : si.rem)}円 × ${si.empRate}%</div>` : '雇用保険料<div class="note">対象外</div>';
+    const stdRow = bonus ? `<tr><td>標準賞与額（1,000円未満切捨て）</td><td>${fmt(si.stdBonus)} 円</td></tr>`
+      : `<tr><td>標準報酬月額<div class="note">報酬月額 ${fmt(si.rem)}円 → 健保 ${si.grade[0]}等級${si.flags.pension ? `／厚年 ${fmt(si.pStd)}円` : ''}${st.std ? '（手動選択）' : ''}</div></td><td>${fmt(si.grade[1])} 円</td></tr>`;
+    siHtml = `<table class="si">${stdRow}
+      <tr><td>${kenpoLabel}</td><td>${fmt(si.kenpo)} 円</td></tr>
+      <tr><td>${pensionLabel}</td><td>${fmt(si.pension)} 円</td></tr>
+      <tr><td>${empLabel}</td><td>${fmt(si.emp)} 円</td></tr>
+      <tr class="total"><td>社会保険料 合計（本人負担）</td><td>${fmt(si.total)} 円</td></tr>
+      <tr><td>社会保険料等控除後の金額</td><td>${fmt(net)} 円</td></tr>
+      <tr id="siTaxRow"><td>源泉所得税</td><td id="siTaxCell"></td></tr>
+      <tr class="hl"><td>差引支給額（住民税を除く）<div class="note">${bonus ? '賞与額' : '課税支給額 ＋ 通勤手当'} － 社会保険料 － 所得税</div></td><td id="siNetCell"></td></tr>
+    </table>
+    <div class="note">${S.fiscalYear}の料率（健保・介護は${ym(S.appliesFrom)}分から、支援金は${ym(S.kenpo.supportFrom)}分から、雇用保険は${S.employment.fiscalYear}）。端数は本人負担分を50銭以下切捨て・50銭超切上げ。健保・介護・支援金は合算して折半しています。実際の標準報酬月額は決定通知書を優先してください。</div>`;
+    if (!SIDATA[st.year]) alerts.push(['warn', `${st.year}年の社会保険料率データがないため、${S.fiscalYear}の料率で計算しています。`]);
+    if (bonus && si.flags.kenpo) alerts.push(['warn', '健康保険の標準賞与額は年度累計573万円が上限です。超える場合は手計算で調整してください。']);
+  }
+
+  let r;
+  if (bonus){
+    if (st.si && (prev == null || Number.isNaN(prev))){ show(null, '前月の社会保険料等控除後の給与額を入力してください'); finish(); return; }
+    if (!st.si && prev == null){ show(null, '前月の社会保険料等控除後の給与額を入力してください'); finish(); return; }
+    r = bonusTax(T, net, prev, st.col, deps, otsuDeps, months);
+    if (r.special) alerts.push(['warn', '算出率表が使えないケースのため、月額表を使う特例の方法で計算しています。']);
+  } else {
+    r = monthlyTax(T, net, st.col, deps, otsuDeps);
+  }
+  const colName = st.col === 'kou' ? `甲欄・扶養親族等 ${deps}人` : '乙欄';
+  show(r.tax, `${T.era} ${bonus ? '賞与の算出率表' : '月額表'} ／ ${colName}`);
+  basisHtml = `<div><b>計算の根拠</b><br>${bonus ? '' : `社会保険料等控除後の金額 ${fmt(net)}円 → `}${r.basis}</div>` + (r.notes && r.notes.length ? `<ul>${r.notes.map(n => `<li>${n}</li>`).join('')}</ul>` : '');
+  finish();
+  if (si){ $('siTaxCell').textContent = `${fmt(r.tax)} 円`; $('siNetCell').textContent = `${fmt(amount + (bonus ? 0 : commute) - si.total - r.tax)} 円`; }
+  $('copy').dataset.value = String(r.tax);
+}
+
+// ---------- イベント ----------
+document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { st.mode = b.dataset.mode; save(); syncVisibility(); render(); }));
+document.querySelectorAll('[data-col]').forEach(b => b.addEventListener('click', () => { st.col = b.dataset.col; save(); syncVisibility(); render(); }));
+$('si').addEventListener('change', e => { st.si = e.target.checked; save(); syncVisibility(); render(); });
+$('year').addEventListener('change', e => { st.year = e.target.value; fillSI(siFor(st.year)); $('pref').value = st.pref; $('std').value = st.std; $('emp').value = st.emp; save(); renderFoot(); render(); });
+[['deps','deps'],['otsuDeps','otsuDeps'],['period','period'],['pref','pref'],['age','age'],['std','std'],['emp','emp']].forEach(([id, key]) => $(id).addEventListener('change', e => { st[key] = e.target.value; save(); render(); }));
+[['amount','amount'],['commute','commute'],['prev','prev']].forEach(([id, key]) => {
+  const el = $(id);
+  el.addEventListener('input', () => { st[key] = el.value; save(); render(); });
+  el.addEventListener('blur', () => { const v = parseYen(el.value); if (v != null && !Number.isNaN(v)) { el.value = fmt(v); st[key] = el.value; save(); } });
+});
+$('copy').addEventListener('click', async () => {
+  const v = $('copy').dataset.value; if (v == null) return;
+  try { await navigator.clipboard.writeText(v); $('copy').textContent = 'コピーしました'; setTimeout(() => $('copy').textContent = '税額をコピー', 1200); } catch (e) { prompt('税額', v); }
+});
+$('reset').addEventListener('click', () => { st.amount = st.commute = st.prev = ''; ['amount','commute','prev'].forEach(id => $(id).value = ''); save(); render(); $('amount').focus(); });
+
+function renderFoot(){
+  const T = TABLES[st.year]; const S = siFor(st.year);
+  $('foot').innerHTML = `
+    <p><b>出典</b><br>
+    国税庁「${T.monthly.title}」${T.monthly.notice}／「${T.bonus.title}」${T.bonus.notice}（<a href="${T.source.monthly}" target="_blank" rel="noopener">月額表 Excel</a>・<a href="${T.source.bonus}" target="_blank" rel="noopener">賞与 Excel</a>、${T.retrieved} 取得）<br>
+    全国健康保険協会「${S.fiscalYear} 保険料額表」（<a href="${S.source}" target="_blank" rel="noopener">Excel</a>、${S.retrieved} 取得）、厚生労働省「${S.employment.fiscalYear} 雇用保険料率」</p>
+    <p>税額は復興特別所得税${+st.year >= 2027 ? '・防衛特別所得税' : ''}を含む源泉徴収税額表（表の行をそのまま引く方式）の金額です。会計ソフトなどが使う「電子計算機等による計算の特例」とは数円〜数十円ずれることがありますが、どちらも正しい税額です。日額表（日払い・丙欄）には対応していません。入力した金額はブラウザ内だけで処理され、外部には送信されません。計算結果は参考値です。最終的な金額は税額表・保険料額表でご確認ください。</p>`;
+}
+
+syncVisibility(); renderFoot(); render();
+})();
+</script>
+</body>
+</html>
